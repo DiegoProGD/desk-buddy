@@ -1,4 +1,4 @@
-const CACHE_NAME = 'desk-robot-v2';
+const CACHE_NAME = 'desk-robot-v3';
 const ASSETS = [
   './',
   './index.html',
