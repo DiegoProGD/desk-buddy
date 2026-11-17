@@ -14,6 +14,7 @@
       padding: 0;
       box-sizing: border-box;
       user-select: none;
+      -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
     html, body {
@@ -24,6 +25,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      touch-action: manipulation;
     }
     #face {
       display: flex;
@@ -33,34 +35,126 @@
       transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
       will-change: transform;
     }
-    .eye {
-      width: 85px;
-      height: 135px;
-      background-color: #ffffff;
-      border-radius: 50%;
+    .eye-wrap {
+      width: 100px;
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: transform 0.11s ease-in-out;
       will-change: transform;
     }
-    .eye.blink {
+    .eye-wrap.blink {
       transform: scaleY(0.04);
+    }
+    .eye-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .eye-shape {
+      transition: all 0.25s ease;
     }
   </style>
 </head>
 <body>
   <div id="face">
-    <div class="eye"></div>
-    <div class="eye"></div>
+    <div class="eye-wrap">
+      <svg class="eye-svg" viewBox="0 0 100 140">
+        <ellipse class="eye-default" cx="50" cy="70" rx="42" ry="66" fill="#ffffff" />
+        <path class="eye-happy" d="M 10 88 Q 50 28 90 88" fill="none" stroke="#ffd60a" stroke-width="18" stroke-linecap="round" style="display:none;" />
+        <path class="eye-sad" d="M 10 52 Q 50 112 90 52" fill="none" stroke="#3a86ff" stroke-width="18" stroke-linecap="round" style="display:none;" />
+        <polygon class="eye-calm" points="50,16 92,118 8,118" fill="#2ec4b6" stroke="#2ec4b6" stroke-width="10" stroke-linejoin="round" style="display:none;" />
+      </svg>
+    </div>
+    <div class="eye-wrap">
+      <svg class="eye-svg" viewBox="0 0 100 140">
+        <ellipse class="eye-default" cx="50" cy="70" rx="42" ry="66" fill="#ffffff" />
+        <path class="eye-happy" d="M 10 88 Q 50 28 90 88" fill="none" stroke="#ffd60a" stroke-width="18" stroke-linecap="round" style="display:none;" />
+        <path class="eye-sad" d="M 10 52 Q 50 112 90 52" fill="none" stroke="#3a86ff" stroke-width="18" stroke-linecap="round" style="display:none;" />
+        <polygon class="eye-calm" points="50,16 92,118 8,118" fill="#2ec4b6" stroke="#2ec4b6" stroke-width="10" stroke-linejoin="round" style="display:none;" />
+      </svg>
+    </div>
   </div>
 
   <script>
     const face = document.getElementById('face');
-    const eyes = document.querySelectorAll('.eye');
+    const eyeWraps = document.querySelectorAll('.eye-wrap');
+    const emotions = ['default', 'happy', 'sad', 'calm'];
+    let currentEmotionIndex = 0;
     let isBlinking = false;
+    let holdTimer = null;
+    let didHold = false;
+    let audioCtx = null;
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
+    }
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playChirp(type = 'tap') {
+      try {
+        initAudio();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'tap') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(620, now);
+          osc.frequency.exponentialRampToValueAtTime(1180, now + 0.08);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.14);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === 'happy') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.setValueAtTime(780, now + 0.09);
+          osc.frequency.exponentialRampToValueAtTime(1250, now + 0.22);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+          osc.start(now);
+          osc.stop(now + 0.24);
+        } else if (type === 'sad') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(480, now);
+          osc.frequency.exponentialRampToValueAtTime(240, now + 0.28);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else if (type === 'calm') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(660, now + 0.26);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+          osc.start(now);
+          osc.stop(now + 0.28);
+        } else {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(580, now);
+          osc.frequency.exponentialRampToValueAtTime(760, now + 0.12);
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          osc.start(now);
+          osc.stop(now + 0.14);
+        }
+      } catch (e) {}
     }
 
     function goFullScreen() {
@@ -73,16 +167,51 @@
       }
     }
 
+    function setEmotion(emotion) {
+      emotions.forEach((em) => {
+        document.querySelectorAll('.eye-' + em).forEach((el) => {
+          el.style.display = (em === emotion) ? 'block' : 'none';
+        });
+      });
+    }
+
     function triggerBlink() {
-      goFullScreen();
       if (isBlinking) return;
       isBlinking = true;
-      eyes.forEach(eye => eye.classList.add('blink'));
+      eyeWraps.forEach(wrap => wrap.classList.add('blink'));
       setTimeout(() => {
-        eyes.forEach(eye => eye.classList.remove('blink'));
+        eyeWraps.forEach(wrap => wrap.classList.remove('blink'));
         setTimeout(() => { isBlinking = false; }, 120);
       }, 130);
     }
+
+    function nextEmotion() {
+      currentEmotionIndex = (currentEmotionIndex + 1) % emotions.length;
+      const next = emotions[currentEmotionIndex];
+      setEmotion(next);
+      playChirp(next);
+    }
+
+    function handlePressStart() {
+      didHold = false;
+      holdTimer = setTimeout(() => {
+        didHold = true;
+        nextEmotion();
+      }, 480);
+    }
+
+    function handlePressEnd() {
+      clearTimeout(holdTimer);
+      goFullScreen();
+      if (!didHold) {
+        playChirp('tap');
+        triggerBlink();
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePressStart);
+    document.addEventListener('pointerup', handlePressEnd);
+    document.addEventListener('pointercancel', () => clearTimeout(holdTimer));
 
     function moveEyes() {
       const maxX = Math.min(window.innerWidth * 0.28, 120);
@@ -94,8 +223,6 @@
       const nextDelay = 550 + Math.random() * 900;
       setTimeout(moveEyes, nextDelay);
     }
-
-    document.addEventListener('click', triggerBlink);
 
     setTimeout(moveEyes, 500);
   </script>
