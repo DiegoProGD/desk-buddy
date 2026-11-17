@@ -52,9 +52,6 @@
       height: 100%;
       overflow: visible;
     }
-    .eye-shape {
-      transition: all 0.25s ease;
-    }
   </style>
 </head>
 <body>
@@ -83,8 +80,7 @@
     const emotions = ['default', 'happy', 'sad', 'calm'];
     let currentEmotionIndex = 0;
     let isBlinking = false;
-    let holdTimer = null;
-    let didHold = false;
+    let tapTimer = null;
     let audioCtx = null;
 
     if ('serviceWorker' in navigator) {
@@ -192,26 +188,20 @@
       playChirp(next);
     }
 
-    function handlePressStart() {
-      didHold = false;
-      holdTimer = setTimeout(() => {
-        didHold = true;
-        nextEmotion();
-      }, 480);
-    }
-
-    function handlePressEnd() {
-      clearTimeout(holdTimer);
+    document.addEventListener('click', () => {
       goFullScreen();
-      if (!didHold) {
-        playChirp('tap');
-        triggerBlink();
+      if (tapTimer !== null) {
+        clearTimeout(tapTimer);
+        tapTimer = null;
+        nextEmotion();
+      } else {
+        tapTimer = setTimeout(() => {
+          tapTimer = null;
+          playChirp('tap');
+          triggerBlink();
+        }, 240);
       }
-    }
-
-    document.addEventListener('pointerdown', handlePressStart);
-    document.addEventListener('pointerup', handlePressEnd);
-    document.addEventListener('pointercancel', () => clearTimeout(holdTimer));
+    });
 
     function moveEyes() {
       const maxX = Math.min(window.innerWidth * 0.28, 120);
